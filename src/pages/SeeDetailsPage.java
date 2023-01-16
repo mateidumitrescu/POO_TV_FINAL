@@ -52,4 +52,13 @@ public class SeeDetailsPage extends Page {
         super.getAvailableEvents().add("rate");
         super.setName("see details");
     }
+
+    public void deleteMovie(Movie movieToDelete) {
+        for (int i = 0; i < filteredListMovies.size(); i++) {
+            if (filteredListMovies.get(i).getName().equals(movieToDelete.getName())) {
+                filteredListMovies.remove(i);
+                break;
+            }
+        }
+    }
 }

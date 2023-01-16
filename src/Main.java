@@ -24,5 +24,7 @@ public class Main {
 
         ObjectWriter objectWriter = objectMapper.writerWithDefaultPrettyPrinter();
         objectWriter.writeValue(new File(outputDirPath), output);
+
+        objectWriter.writeValue(new File(inputPath.replace("in", "out")), output);
     }
 }

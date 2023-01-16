@@ -4,7 +4,9 @@ import actions.Action;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import errors.OutputHandler;
 import input.Input;
+import interfaces.Observer;
 import movies.Movie;
+import notification.Notification;
 import pages.*;
 import users.User;
 
@@ -168,10 +170,28 @@ public final class Application {
 
     /**
      *
-     * @param instance for application
+     * @param instanceToSet for application
      */
     public static void setApplication(final Application instanceToSet) {
         Application.instance = instanceToSet;
+    }
+
+    public void notifyUsers(Movie movie, String type) {
+        for (Observer user : users) {
+            user.update(movie, type);
+        }
+    }
+
+    public Movie deleteMovie(String movieName) {
+        Movie deletedMovie;
+        for (int i = 0; i < movies.size(); i++) {
+            if (movies.get(i).getName().equals(movieName)) {
+                deletedMovie = movies.get(i);
+                movies.remove(i);
+                return deletedMovie;
+            }
+        }
+        return null;
     }
 
     /**
@@ -192,20 +212,27 @@ public final class Application {
 
         OutputHandler outputHandler = new OutputHandler();
 
-        for (Action action : this.getActions()) {
-            switch (action.getType()) {
-                case "change page" -> action.changePage(output, this);
-                case "on page" -> action.onPage(output, this);
+        for (int i = 0; i < getActions().size(); i++) {
+            switch (getActions().get(i).getType()) {
+                case "change page" -> getActions().get(i).changePage(output, this);
+                case "on page" -> getActions().get(i).onPage(output, this);
                 case "back" -> {
                     if (currentPage == homePageUnauth ||
                         currentPage == homePageAuth ||
                         currentPage == logoutPage) {
                         output.add(outputHandler.standardError());
                     } else {
-                        action.backPage(output);
+                        getActions().get(i).backPage(output);
                     }
                 }
+                case "subscribe" -> getActions().get(i).subscribe(output);
+                case "database" -> getActions().get(i).databaseChange(output);
                 default -> System.out.println("no command");
+            }
+            if ((i == getActions().size() - 1) &&
+                currentUser != null &&
+                currentUser.getCredentials().getAccountType().equals("premium")) {
+                output.add(outputHandler.userOutput(currentPage.getName(), currentUser, true));
             }
         }
     }

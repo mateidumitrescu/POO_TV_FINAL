@@ -5,7 +5,9 @@ import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import com.fasterxml.jackson.databind.node.ObjectNode;
+import movies.Genre;
 import movies.Movie;
+import notification.Notification;
 import users.User;
 
 import java.util.ArrayList;
@@ -23,6 +25,7 @@ public class OutputHandler {
         objectNode.put("currentUser", (JsonNode) null);
         return objectNode;
     }
+
 
     /**
      *
@@ -45,10 +48,24 @@ public class OutputHandler {
         createMovieNodes(currentUser, "watchedMovies", user.getWatchedMovies());
         createMovieNodes(currentUser, "likedMovies", user.getLikedMovies());
         createMovieNodes(currentUser, "ratedMovies", user.getRatedMovies());
-
-
+        createNotificationNodes(
+                Application.getInstance().getCurrentUser().getNotifications(),
+                currentUser);
 
         return currentUser;
+    }
+
+    public void createNotificationNodes(final ArrayList<Notification> notifications,
+                                        final ObjectNode objectNode) {
+        ArrayNode notificationsNodes = objectNode.putArray("notifications");
+        if (notifications != null) {
+            for (Notification notification : notifications) {
+                ObjectNode node = new ObjectMapper().createObjectNode();
+                node.put("movieName", notification.getMovieName());
+                node.put("message", notification.getNotificationType());
+                notificationsNodes.add(node);
+            }
+        }
     }
 
     /**
@@ -66,7 +83,7 @@ public class OutputHandler {
             for (Movie movie : movies) {
                 ObjectNode node = new ObjectMapper().createObjectNode();
                 node.put("name", movie.getName());
-                node.put("year", movie.getYear());
+                node.put("year", String.valueOf(movie.getYear()));
                 node.put("duration", movie.getDuration());
                 ArrayNode nodeGenres = node.putArray("genres");
                 for (String genre : movie.getGenres()) {
@@ -95,19 +112,26 @@ public class OutputHandler {
      * @param user current
      * @return output
      */
-    public ObjectNode userOutput(final String page, final User user) {
+    public ObjectNode userOutput(final String page, final User user, final boolean lastAction) {
         ObjectNode objectNode = new ObjectMapper().createObjectNode();
         objectNode.put("error", (JsonNode) null);
-        if (page.equals("movies")) {
-            createMovieNodes(objectNode, "currentMoviesList", user.getAvailableMovies());
-        } else if (page.equals("see details")) {
-            createMovieNodes(objectNode, "currentMoviesList", Application.getSeeDetailsPage().getFilteredListMovies());
+        if (lastAction) {
+            objectNode.put("currentMoviesList", (JsonNode) null);
         } else {
-            ArrayList<Movie> nullMovies = new ArrayList<>();
-            createMovieNodes(objectNode, "currentMoviesList", nullMovies);
+            if (page.equals("movies")) {
+                createMovieNodes(objectNode, "currentMoviesList", user.getAvailableMovies());
+            } else if (page.equals("see details")) {
+                createMovieNodes(objectNode, "currentMoviesList", Application.getSeeDetailsPage().getFilteredListMovies());
+            } else {
+                ArrayList<Movie> nullMovies = new ArrayList<>();
+                createMovieNodes(objectNode, "currentMoviesList", nullMovies);
+            }
         }
-
-        objectNode.put("currentUser", getCurrentUser(user));
+        if (lastAction) {
+            objectNode.put("currentUser", recommendationOutput(user));
+        } else {
+            objectNode.put("currentUser", getCurrentUser(user));
+        }
 
         return objectNode;
     }
@@ -175,5 +199,44 @@ public class OutputHandler {
                 Application.getInstance().getCurrentUser()));
 
         return objectNode;
+    }
+
+    public ObjectNode recommendationOutput(User user) {
+        ObjectNode currentUser = new ObjectMapper().createObjectNode();
+        ObjectNode credentials = new ObjectMapper().createObjectNode();
+        credentials.put("name", user.getCredentials().getName());
+        credentials.put("password", user.getCredentials().getPassword());
+        credentials.put("accountType", user.getCredentials().getAccountType());
+        credentials.put("country", user.getCredentials().getCountry());
+        credentials.put("balance", user.getCredentials().getBalance());
+        currentUser.put("credentials", credentials);
+
+        currentUser.put("tokensCount", user.getTokensCount());
+        currentUser.put("numFreePremiumMovies", user.getNumFreePremiumMovies());
+        createMovieNodes(currentUser, "purchasedMovies", user.getPurchasedMovies());
+        createMovieNodes(currentUser, "watchedMovies", user.getWatchedMovies());
+        createMovieNodes(currentUser, "likedMovies", user.getLikedMovies());
+        createMovieNodes(currentUser, "ratedMovies", user.getRatedMovies());
+        boolean foundRec = false;
+        for (Genre genre : user.getLikedGenres()) {
+            for (Movie movie : user.getSortedMovies()) {
+                if (movie.getGenres().contains(genre.getType())) {
+                    user.update(movie, "RECOMMENDATION");
+                    foundRec = true;
+                    break;
+                }
+                if (foundRec) {
+                    break;
+                }
+            }
+        }
+        if (!foundRec) {
+            user.update(null, "RECOMMENDATION");
+        }
+        createNotificationNodes(
+                Application.getInstance().getCurrentUser().getNotifications(),
+                currentUser);
+
+        return currentUser;
     }
 }

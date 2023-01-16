@@ -3,6 +3,7 @@ package actions;
 import application.Application;
 import com.fasterxml.jackson.databind.node.ArrayNode;
 import errors.OutputHandler;
+import movies.Genre;
 import movies.Movie;
 import pages.MoviesPage;
 import pages.Page;
@@ -19,6 +20,16 @@ public class Action {
     private String feature;
     private Credentials credentials;
 
+    private String deletedMovie;
+
+    public String getDeletedMovie() {
+        return deletedMovie;
+    }
+
+    public void setDeletedMovie(String deletedMovie) {
+        this.deletedMovie = deletedMovie;
+    }
+
     private int rate;
 
     /**
@@ -32,6 +43,26 @@ public class Action {
     private int count;
 
     private Filter filters;
+
+    private String subscribedGenre;
+
+    public String getSubscribedGenre() {
+        return subscribedGenre;
+    }
+
+    public void setSubscribedGenre(String subscribedGenre) {
+        this.subscribedGenre = subscribedGenre;
+    }
+
+    private Movie addedMovie;
+
+    public Movie getAddedMovie() {
+        return addedMovie;
+    }
+
+    public void setAddedMovie(Movie addedMovie) {
+        this.addedMovie = addedMovie;
+    }
 
     private String movie;
 
@@ -167,15 +198,87 @@ public class Action {
     }
 
     public void backPage(final ArrayNode output) {
-        Page backPage = Application.getInstance().getPagesStack().pop();
         OutputHandler outputHandler = new OutputHandler();
+        Application.getInstance().getPagesStack().pop();
+        if (Application.getInstance().getPagesStack().empty()) {
+            output.add(outputHandler.standardError());
+            return;
+        }
+        Page backPage = Application.getInstance().getPagesStack().pop();
         switch (backPage.getName()) {
-            case "movies" -> output.add(outputHandler.userOutput("movies", Application.getInstance().getCurrentUser()));
+            case "movies" -> output.add(outputHandler.userOutput("movies", Application.getInstance().getCurrentUser(),
+                    false));
             case "see details" -> output.add(outputHandler.oneMovie(
                     Application.getInstance().getCurrentUser().getAvailableMovies(),
                     Application.getSeeDetailsPage().getCurrentMovie()));
         }
         switchPage(backPage.getName());
+    }
+
+    boolean checkIfMovieExists() {
+        for (Movie movie : Application.getInstance().getMovies()) {
+            if (movie.getName().equals(addedMovie.getName()))
+                return true;
+        }
+        return false;
+    }
+
+    public void subscribe(ArrayNode output) {
+        OutputHandler outputHandler = new OutputHandler();
+        if (Application.getCurrentPage() != Application.getSeeDetailsPage()) {
+            output.add(outputHandler.standardError());
+            return;
+        }
+        for (String genre : Application.getSeeDetailsPage().getCurrentMovie().getGenres()) {
+            if (genre.equals(subscribedGenre)) {
+                for (String userSubscribedGenre : Application.getInstance().getCurrentUser().getSubscribedGenres()) {
+                    if (genre.equals(userSubscribedGenre)) {
+                        output.add(outputHandler.standardError());
+                        return;
+                    }
+                }
+                Application.getInstance().getCurrentUser().addSubscribedGenre(genre);
+                return;
+            }
+        }
+        output.add(outputHandler.standardError());
+    }
+
+    public void databaseChange(final ArrayNode output) {
+        OutputHandler outputHandler = new OutputHandler();
+
+        switch (feature) {
+            case "add" -> {
+                    Movie newMovie;
+                    newMovie = addedMovie;
+                    boolean movieExists = checkIfMovieExists();
+                    if (movieExists) {
+                        output.add(outputHandler.standardError());
+                        return;
+                    }
+
+                    Application.getInstance().getMovies().add(newMovie);
+
+                    // setting available movies for users if they live in certain countries
+                    Application.getInstance().notifyUsers(newMovie, "ADD");
+
+            }
+
+            case "delete" -> {
+                Movie movieDeleted = Application.getInstance().deleteMovie(this.getDeletedMovie());
+                if (movieDeleted == null) {
+                    output.add(outputHandler.standardError());
+                    break;
+                }
+                Application.getSeeDetailsPage().deleteMovie(movieDeleted);
+                Application.getInstance().notifyUsers(movieDeleted, "DELETE");
+                if (Application.getSeeDetailsPage().getCurrentMovie() != null &&
+                        Application.getSeeDetailsPage().getCurrentMovie().getName().equals(
+                        movieDeleted.getName())) {
+                    Application.getSeeDetailsPage().setCurrentMovie(null);
+                }
+            }
+        }
     }
 
     /**
@@ -195,7 +298,8 @@ public class Action {
             }
             if (this.getPage().equals("movies")) {
                 Application.getSeeDetailsPage().setFilteredListMovies(Application.getInstance().getCurrentUser().getAvailableMovies());
-                output.add(outputHandler.userOutput("movies",application.getCurrentUser()));
+                output.add(outputHandler.userOutput("movies",application.getCurrentUser(),
+                        false));
             }
             if (this.getPage().equals("see details")) {
                 Movie foundMovie = searchForMovie(this.getMovie());
@@ -392,7 +496,7 @@ public class Action {
      */
     public boolean alreadyWatched(final User user,
                                   final Movie movieToWatch) {
-        for (final Movie movie : user.getPurchasedMovies()) {
+        for (final Movie movie : user.getWatchedMovies()) {
             if (movie.getName().equals(movieToWatch.getName())) {
                 return true;
             }
@@ -415,8 +519,27 @@ public class Action {
     public void addMovieToLiked(final String movieName) {
         for (final Movie movie : Application.getInstance().getCurrentUser().getWatchedMovies()) {
             if (movie.getName().equals(movieName)) {
-                Application.getInstance().getCurrentUser().getLikedMovies().add(movie);
+                User currentUser = Application.getInstance().getCurrentUser();
+                currentUser.getLikedMovies().add(movie);
                 movie.increaseNumLikes();
+                boolean foundGenre = false;
+                for (String movieGenre : movie.getGenres()) {
+                    for (Genre genre : currentUser.getLikedGenres()) {
+                        if (genre.getType().equals(movieGenre)) {
+                            genre.increaseLikes();
+                            foundGenre = true;
+                            break;
+                        }
+                    }
+                    if (!foundGenre) {
+                        Genre newGenre = new Genre(movieGenre);
+                        newGenre.setNumberOfLikes(1);
+                        currentUser.addGenre(newGenre);
+                    }
+                    foundGenre = false;
+                }
+                currentUser.sortGenres();
+                currentUser.sortMovies();
                 return;
             }
         }
@@ -426,10 +549,15 @@ public class Action {
      *
      * @param movieToAdd to rated array
      */
-    public void addMovieToRated(final Movie movieToAdd) {
-        Application.getInstance().getCurrentUser().getRatedMovies().add(movieToAdd);
+    public void addMovieToRated(final Movie movieToAdd, final boolean alreadyRated) {
+        if (!alreadyRated) {
+            Application.getInstance().getCurrentUser().getRatedMovies().add(movieToAdd);
+            movieToAdd.setRating(this.getRate());
+            movieToAdd.calculateRating(this.rate, false);
+            return;
+        }
         movieToAdd.setRating(this.getRate());
-        movieToAdd.calculateRating(this.rate);
+        movieToAdd.calculateRating(this.rate, true);
     }
 
     /**
@@ -450,6 +578,16 @@ public class Action {
     public boolean userHasEnoughTokens(final int tokensToCompare) {
         return Application.getInstance().getCurrentUser().getTokensCount()
                 >= tokensToCompare;
+    }
+
+    public boolean alreadyRated(User currentUser, Movie movieToFind) {
+        for (Movie movie : currentUser.getRatedMovies()) {
+            if (movie.getName().equals(movieToFind.getName())) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /**
@@ -486,7 +624,8 @@ public class Action {
                         application.setCurrentUser(user);
                         output.add(outputHandler.userOutput(
                                 "homepage authenticated",
-                                application.getCurrentUser()));
+                                application.getCurrentUser(),
+                                false));
                     } else {
                         output.add(outputHandler.standardError());
                         switchPage("homepage unauthenticated");
@@ -511,7 +650,8 @@ public class Action {
                         application.addUser(newUser);
                         switchPage("homepage authenticated");
                         application.setCurrentUser(newUser);
-                        output.add(outputHandler.userOutput("homepage authenticated", newUser));
+                        output.add(outputHandler.userOutput("homepage authenticated", newUser,
+                                false));
                         Application.getSeeDetailsPage().setFilteredListMovies(
                                 newUser.getAvailableMovies());
                     }
@@ -559,6 +699,10 @@ public class Action {
                         output.add(outputHandler.standardError());
                         break;
                     }
+                    if (alreadyWatched(Application.getInstance().getCurrentUser(),
+                            Application.getSeeDetailsPage().getCurrentMovie())) {
+                        break;
+                    }
                     addMovieToWatched(Application.getSeeDetailsPage().getCurrentMovie());
                     output.add(outputHandler.oneMovie(
                             Application.getSeeDetailsPage().getFilteredListMovies(),
@@ -570,7 +714,7 @@ public class Action {
                         output.add(outputHandler.standardError());
                         break;
                     }
-                    addMovieToLiked(this.getMovie());
+                    addMovieToLiked(Application.getSeeDetailsPage().getCurrentMovie().getName());
                     output.add(outputHandler.oneMovie(
                             Application.getSeeDetailsPage().getFilteredListMovies(),
                             Application.getSeeDetailsPage().getCurrentMovie()));
@@ -585,7 +729,9 @@ public class Action {
                         output.add(outputHandler.standardError());
                         break;
                     }
-                    addMovieToRated(Application.getSeeDetailsPage().getCurrentMovie());
+                    addMovieToRated(Application.getSeeDetailsPage().getCurrentMovie(),
+                            alreadyRated(Application.getInstance().getCurrentUser(),
+                            Application.getSeeDetailsPage().getCurrentMovie()));
                     output.add(outputHandler.oneMovie(
                             Application.getSeeDetailsPage().getFilteredListMovies(),
                                 Application.getSeeDetailsPage().getCurrentMovie()));
@@ -623,6 +769,7 @@ public class Action {
             case "login" -> {
                 Application.setCurrentPage(Application.getLoginPage());
                 Application.getSeeDetailsPage().setCurrentMovie(null);
+                Application.getInstance().getPagesStack().clear();
                 Application.getInstance().getPagesStack().push(
                         Application.getLoginPage());
             }

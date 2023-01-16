@@ -46,18 +46,35 @@ public class Movie {
      */
     public void increaseNumRatings(final float rateToAdd) {
         this.numRatings = this.numRatings + 1;
+    }
+
+    private int numRatingPeople = 0;
+
+    public int getNumRatingPeople() {
+        return numRatingPeople;
+    }
+
+    public void setNumRatingPeople(int numRatingPeople) {
+        this.numRatingPeople = numRatingPeople;
+    }
+
+    public void increaseNumPeopleRated(final float rateToAdd) {
         if (getRatingsList() == null) {
             ratingsList = new ArrayList<>();
         }
         getRatingsList().add(rateToAdd);
+        numRatingPeople += 1;
     }
 
     /**
      *
-     * @param rate to add and calculate again rating for movie
+     * @param rateToAdd to add and calculate again rating for movie
      */
-    public void calculateRating(final float rateToAdd) {
-        increaseNumRatings(rateToAdd);
+    public void calculateRating(final float rateToAdd, final boolean alreadyRated) {
+        if (!alreadyRated) {
+            increaseNumRatings(rateToAdd);
+        }
+        increaseNumPeopleRated(rateToAdd);
         float sum = 0;
         for (float r : ratingsList) {
             sum += r;
@@ -67,7 +84,7 @@ public class Movie {
 
     /**
      *
-     * @param numLikes for movie
+     * @param numLikesToSet for movie
      */
     public void setNumLikes(final int numLikesToSet) {
         this.numLikes = numLikesToSet;
