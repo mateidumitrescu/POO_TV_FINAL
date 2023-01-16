@@ -6,23 +6,39 @@ public class Notification {
 
     private String movieName;
 
+    /**
+     *
+     * @return notification type (ex: "action", "thriller")
+     */
     public String getNotificationType() {
         return notificationType;
     }
 
-    public void setNotificationType(String notificationType) {
+    /**
+     *
+     * @param notificationType to set (ex: "action", "thriller")
+     */
+    public void setNotificationType(final String notificationType) {
         this.notificationType = notificationType;
     }
 
+    /**
+     *
+     * @return movie name for notification
+     */
     public String getMovieName() {
         return movieName;
     }
 
-    public void setMovieName(String movieName) {
+    /**
+     *
+     * @param movieName to set for notification
+     */
+    public void setMovieName(final String movieName) {
         this.movieName = movieName;
     }
 
-    public Notification(String type, String movie) {
+    public Notification(final String type, final String movie) {
         notificationType = type;
         movieName = movie;
     }

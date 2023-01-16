@@ -1,15 +1,12 @@
 package users;
 
-import application.Application;
 import interfaces.Observer;
 import movies.Genre;
 import movies.Movie;
 import notification.Notification;
 
 import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Comparator;
-import java.util.Iterator;
+
 
 public class User implements Observer {
 
@@ -17,28 +14,51 @@ public class User implements Observer {
 
     private ArrayList<String> subscribedGenres;
 
+    /**
+     *
+     * @return list of subscribed genres
+     */
     public ArrayList<String> getSubscribedGenres() {
         return subscribedGenres;
     }
 
-    public void setSubscribedGenres(ArrayList<String> subscribedGenres) {
+    /**
+     *
+     * @param subscribedGenres
+     */
+    public void setSubscribedGenres(final ArrayList<String> subscribedGenres) {
         this.subscribedGenres = subscribedGenres;
     }
 
-    public void addSubscribedGenre(String genre) {
+    /**
+     *
+     * @param genre to add in user list of subscribed genres
+     */
+    public void addSubscribedGenre(final String genre) {
         subscribedGenres.add(genre);
     }
 
     private ArrayList<Genre> likedGenres;
 
+    /**
+     *
+     * @return liked genres
+     */
     public ArrayList<Genre> getLikedGenres() {
         return likedGenres;
     }
 
+    /**
+     *
+     * @param genreToAdd to user list of liked genres
+     */
     public void addGenre(Genre genreToAdd) {
         likedGenres.add(genreToAdd);
     }
 
+    /**
+     * sort genres
+     */
     public void sortGenres() {
         likedGenres.sort((o1, o2) -> {
             if (o1.getNumberOfLikes() != o2.getNumberOfLikes()) {
@@ -50,14 +70,25 @@ public class User implements Observer {
 
     private ArrayList<Movie> sortedMovies;
 
+    /**
+     *
+     * @return sorted list of available movies
+     */
     public ArrayList<Movie> getSortedMovies() {
         return sortedMovies;
     }
 
-    public void setSortedMovies(ArrayList<Movie> sortedMovies) {
+    /**
+     *
+     * @param sortedMovies to set for user
+     */
+    public void setSortedMovies(final ArrayList<Movie> sortedMovies) {
         this.sortedMovies = sortedMovies;
     }
 
+    /**
+     * sort available movies for user
+     */
     public void sortMovies() {
         if (sortedMovies == null) {
             sortedMovies = new ArrayList<>();
@@ -66,7 +97,11 @@ public class User implements Observer {
         sortedMovies.sort((o1, o2) -> o2.getNumLikes() - o1.getNumLikes());
     }
 
-    public void setLikedGenres(ArrayList<Genre> likedGenres) {
+    /**
+     *
+     * @param likedGenres to set for user
+     */
+    public void setLikedGenres(final ArrayList<Genre> likedGenres) {
         this.likedGenres = likedGenres;
     }
 
@@ -243,7 +278,11 @@ public class User implements Observer {
         this.ratedMovies = ratedMovies;
     }
 
-    public void deleteMovie(Movie movieToDelete) {
+    /**
+     *
+     * @param movieToDelete to delete from available movies
+     */
+    public void deleteMovie(final Movie movieToDelete) {
         for (int i = 0; i < availableMovies.size(); i++) {
             if (availableMovies.get(i).getName().equals(movieToDelete.getName())) {
                 availableMovies.remove(availableMovies.get(i));
@@ -283,7 +322,11 @@ public class User implements Observer {
         }
     }
 
-    public void addMovie(Movie movieToAdd) {
+    /**
+     *
+     * @param movieToAdd to available movies
+     */
+    public void addMovie(final Movie movieToAdd) {
         for (String country : movieToAdd.getCountriesBanned()) {
             if (country.equals(credentials.getCountry())) {
                 return;
@@ -302,11 +345,19 @@ public class User implements Observer {
 
     }
 
+    /**
+     *
+     * @return notifications list of user
+     */
     public ArrayList<Notification> getNotifications() {
         return notifications;
     }
 
-    public void setNotifications(ArrayList<Notification> notifications) {
+    /**
+     *
+     * @param notifications to set for user
+     */
+    public void setNotifications(final ArrayList<Notification> notifications) {
         this.notifications = notifications;
     }
 
@@ -323,7 +374,11 @@ public class User implements Observer {
 
     private ArrayList<Notification> notifications;
 
-    public void addRecommendation(Movie movie) {
+    /**
+     *
+     * @param movie recommended
+     */
+    public void addRecommendation(final Movie movie) {
         Notification notification;
         if (movie == null) {
             notification = new Notification("Recommendation", "No recommendation");
@@ -332,8 +387,14 @@ public class User implements Observer {
         }
         notifications.add(notification);
     }
+
+    /**
+     *
+     * @param movie added/deleted/recommended for notification
+     * @param type of notification
+     */
     @Override
-    public void update(Movie movie, String type) {
+    public void update(final Movie movie, final String type) {
         switch (type) {
             case "ADD" -> addMovie(movie);
             case "DELETE" -> deleteMovie(movie);

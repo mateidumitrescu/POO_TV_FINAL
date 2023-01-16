@@ -23,7 +23,7 @@ public final class Application {
         return pagesStack;
     }
 
-    public void setPagesStack(Stack<Page> pagesStack) {
+    public void setPagesStack(final Stack<Page> pagesStack) {
         this.pagesStack = pagesStack;
     }
 
@@ -176,13 +176,24 @@ public final class Application {
         Application.instance = instanceToSet;
     }
 
-    public void notifyUsers(Movie movie, String type) {
+    /**
+     *
+     * @param movie which was added or deleted
+     * @param type of notification to send to users
+     */
+    public void notifyUsers(final Movie movie,
+                            final String type) {
         for (Observer user : users) {
             user.update(movie, type);
         }
     }
 
-    public Movie deleteMovie(String movieName) {
+    /**
+     *
+     * @param movieName to delete from database
+     * @return deleted movie
+     */
+    public Movie deleteMovie(final String movieName) {
         Movie deletedMovie;
         for (int i = 0; i < movies.size(); i++) {
             if (movies.get(i).getName().equals(movieName)) {
@@ -217,22 +228,22 @@ public final class Application {
                 case "change page" -> getActions().get(i).changePage(output, this);
                 case "on page" -> getActions().get(i).onPage(output, this);
                 case "back" -> {
-                    if (currentPage == homePageUnauth ||
-                        currentPage == homePageAuth ||
-                        currentPage == logoutPage) {
+                    if (currentPage == homePageUnauth
+                            || currentPage == homePageAuth
+                            || currentPage == logoutPage) {
                         output.add(outputHandler.standardError());
                     } else {
                         getActions().get(i).backPage(output);
                     }
                 }
-                case "subscribe" -> getActions().get(i).subscribe(output);
                 case "database" -> getActions().get(i).databaseChange(output);
                 default -> System.out.println("no command");
             }
-            if ((i == getActions().size() - 1) &&
-                currentUser != null &&
-                currentUser.getCredentials().getAccountType().equals("premium")) {
-                output.add(outputHandler.userOutput(currentPage.getName(), currentUser, true));
+            if ((i == getActions().size() - 1)
+                    && currentUser != null
+                    && currentUser.getCredentials().getAccountType().equals("premium")) {
+                output.add(outputHandler.userOutput(currentPage.getName(),
+                        currentUser, true));
             }
         }
     }

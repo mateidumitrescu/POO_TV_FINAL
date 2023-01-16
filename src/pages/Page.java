@@ -31,19 +31,35 @@ public abstract class Page {
 
     private String name;
 
-    public void setAvailablePages(ArrayList<String> availablePages) {
+    /**
+     *
+     * @param availablePages to set
+     */
+    public void setAvailablePages(final ArrayList<String> availablePages) {
         this.availablePages = availablePages;
     }
 
-    public void setAvailableEvents(ArrayList<String> availableEvents) {
+    /**
+     *
+     * @param availableEvents to set
+     */
+    public void setAvailableEvents(final ArrayList<String> availableEvents) {
         this.availableEvents = availableEvents;
     }
 
+    /**
+     *
+     * @return name of page
+     */
     public String getName() {
         return name;
     }
 
-    public void setName(String name) {
+    /**
+     *
+     * @param name to set for page
+     */
+    public void setName(final String name) {
         this.name = name;
     }
 }

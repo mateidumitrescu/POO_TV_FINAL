@@ -50,10 +50,15 @@ public class SeeDetailsPage extends Page {
         super.getAvailableEvents().add("watch");
         super.getAvailableEvents().add("like");
         super.getAvailableEvents().add("rate");
+        super.getAvailableEvents().add("subscribe");
         super.setName("see details");
     }
 
-    public void deleteMovie(Movie movieToDelete) {
+    /**
+     *
+     * @param movieToDelete is the movie that database will delete
+     */
+    public void deleteMovie(final Movie movieToDelete) {
         for (int i = 0; i < filteredListMovies.size(); i++) {
             if (filteredListMovies.get(i).getName().equals(movieToDelete.getName())) {
                 filteredListMovies.remove(i);

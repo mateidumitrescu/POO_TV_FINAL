@@ -119,7 +119,7 @@ public class OutputHandler {
             objectNode.put("currentMoviesList", (JsonNode) null);
         } else {
             if (page.equals("movies")) {
-                createMovieNodes(objectNode, "currentMoviesList", user.getAvailableMovies());
+                createMovieNodes(objectNode, "currentMoviesList", Application.getSeeDetailsPage().getFilteredListMovies());
             } else if (page.equals("see details")) {
                 createMovieNodes(objectNode, "currentMoviesList", Application.getSeeDetailsPage().getFilteredListMovies());
             } else {
@@ -201,7 +201,12 @@ public class OutputHandler {
         return objectNode;
     }
 
-    public ObjectNode recommendationOutput(User user) {
+    /**
+     *
+     * @param user current user logged in
+     * @return node with final output with recommendation for premium user
+     */
+    public ObjectNode recommendationOutput(final User user) {
         ObjectNode currentUser = new ObjectMapper().createObjectNode();
         ObjectNode credentials = new ObjectMapper().createObjectNode();
         credentials.put("name", user.getCredentials().getName());
